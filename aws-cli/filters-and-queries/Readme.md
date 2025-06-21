@@ -67,19 +67,46 @@ We can now take this filtered-at-server output and further parse it to only get 
 
 Example 1 using native `--query`option using [JMESPath Syntax](https://jmespath.org/)
 ```sh
-export AWS_CLI_TEST_VPC = $(aws ec2 describe-vpcs --region us-east-1 --profile iamadmin-prod --filters Name=tag:Name,Values=aws-cli-filters-vpc --query 'Vpcs[*].VpcId | [0]')
+export AWS_CLI_TEST_VPC=$(aws ec2 describe-vpcs --region us-east-1 --profile iamadmin-prod --filters Name=tag:Name,Values=aws-cli-filters-vpc --query 'Vpcs[*].VpcId | [0]' --output text)
 
 echo $AWS_CLI_TEST_VPC
 ```
-The above command filters out all VPCs from the JSON output using `--query 'Vpcs[*]`.<br/>
+**Explanation:** The above command filters out all VPCs from the JSON output using `--query 'Vpcs[*]`.<br/>
 Further filtering with `--query 'Vpcs[*].VpcId'` outputs only the VPCId but as a list.<br/>
 To only fetch the value we pipe the first value of the list (since we only have one VPC) using `--query 'Vpcs[*].VpcId | [0]'`.<br/>
-Finally we assign the output of this command to a variable called `AWS_CLI_TEST_VPC` which we can further use in other commands as seen in the example below.
+Finally we assign the output of this command to a variable called `AWS_CLI_TEST_VPC` which we can further use in other commands as seen in the example below.<br/>
+The output by default is JSON and so the query result is output with double quotes. To just get the vpc-id we add the `--output text`.
 
 ## Create another using resource using the previous created variable
 ```sh
 aws ec2 associate-vpc-cidr-block \
   --cidr-block 100.64.0.0/24 \
-  --region us-east-1 --profile iamadmin-prod \
-  --vpc-id $AWS_CLI_TEST_VPC
+    --region us-east-1 --profile iamadmin-prod \
+      --vpc-id $AWS_CLI_TEST_VPC
+```
+We can pass on the VPC ID that was assigned to the variable `AWS_CLI_TEST_VPC` as part of the input parameters to the next AWS CLI command.
+
+---
+## Verification
+
+Here's the command to describe VPC details but this time we query for just the `CidrBlockAssociationSet` and `VpcId` details from the CLI output. Apart from JSON and text, we can also output in the YAML format if required.
+
+```sh
+aws ec2 describe-vpcs \
+--region us-east-1 --profile iamadmin-prod \
+--filters Name=tag:Name,Values=aws-cli-filters-vpc \
+--query 'Vpcs[*].[CidrBlockAssociationSet, VpcId]' --output yaml
+```
+
+Output of the above command
+```
+- - - AssociationId: vpc-cidr-assoc-0ca2b9816423ac142
+      CidrBlock: 10.2.0.0/16
+      CidrBlockState:
+        State: associated
+    - AssociationId: vpc-cidr-assoc-03ba8e691e2cc209a
+      CidrBlock: 100.64.0.0/24
+      CidrBlockState:
+        State: associated
+  - vpc-093a100d0f9b5eddc
 ```
