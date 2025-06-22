@@ -1,0 +1,1 @@
+Some practicals of running AWS CLI commands using bash script to make day-to-day activities easier.
