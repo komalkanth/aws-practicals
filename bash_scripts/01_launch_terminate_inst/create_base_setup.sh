@@ -107,3 +107,20 @@ else
     --vpc-id ${BASE_VPC_ID}
   # exit 1
 fi
+
+
+# CREATING A FUNCTION THAT IS FINDING THE ROUTE-TABLE ASSOCIATED WITH OUT VPC
+BASE_VPC_ID=$(check_my_base_vpc)
+check_my_base_vpc_rt () {
+  aws ec2 describe-route-tables --region ${REGION} --profile ${MYAWSPROFILE} --filters "Name=vpc-id,Values=${BASE_VPC_ID}" --query "RouteTables[*].RouteTableId" --output text
+}
+BASE_VPC_RT=$(check_my_base_vpc_rt)
+
+
+# ADD A DEFAULT ROUTE TOWARDS IGW
+create_default_route () {
+  aws ec2 create-route \
+    --route-table-id ${BASE_VPC_RT} \
+    --region ${REGION} --profile ${MYAWSPROFILE} \
+    --destination-cidr-block 0.0.0.0/0 --gateway-id ${BASE_IGW_ID}
+}
